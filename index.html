@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лабораторная работа №3 - MPI</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --text-color: #212529;
+            --primary-color: #0d6efd;
+            --table-border: #dee2e6;
+            --table-alt: #f2f2f2;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2, h3 { color: #343a40; border-bottom: 2px solid var(--table-border); padding-bottom: 10px; }
+        h1 { text-align: center; border-bottom: none; font-size: 2.2em; }
+        .subtitle { text-align: center; color: #6c757d; margin-bottom: 40px; font-size: 1.1em; }
+        img { max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 20px 0; display: block; margin-left: auto; margin-right: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        th, td { padding: 12px; text-align: center; border: 1px solid var(--table-border); }
+        th { background-color: var(--primary-color); color: white; font-weight: 600; }
+        tr:nth-child(even) { background-color: var(--table-alt); }
+        code {
+            background-color: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background-color: #212529;
+            color: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        pre code { background-color: transparent; color: inherit; padding: 0; }
+        .highlight { background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; border-radius: 4px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+    <h1>Лабораторная работа №3</h1>
+    <div class="subtitle">Параллельное умножение матриц с использованием технологии MPI</div>
+
+    <h2>1. Цель работы</h2>
+    <p>Изучение технологии передачи сообщений MPI на примере задачи умножения квадратных матриц. Исследование зависимости времени выполнения, ускорения и эффективности от размера задачи и числа процессов на суперкомпьютере «Сергей Королёв».</p>
+
+    <h2>2. Условия эксперимента</h2>
+    <ul>
+        <li><b>Оборудование:</b> вычислительный узел суперкомпьютера «Сергей Королёв» (2 × Intel Xeon X5647 @ 2.93 ГГц, CentOS 7).</li>
+        <li><b>Планировщик задач:</b> SLURM.</li>
+        <li><b>MPI-реализация:</b> Intel MPI 4.1.3 (модуль <code>intel/mpi4</code>).</li>
+        <li><b>Компилятор:</b> <code>mpiicpc</code> (C++11).</li>
+        <li><b>Размеры матриц (N):</b> 200, 400, 800, 1200, 1600, 2000.</li>
+        <li><b>Число процессов (P):</b> 1, 2, 4, 8.</li>
+    </ul>
+
+    <h2>3. Алгоритм распараллеливания</h2>
+    <p>Использована схема декомпозиции по строкам. Матрица <code>A</code> разрезается на горизонтальные полосы (по числу процессов), которые рассылаются через <code>MPI_Scatter</code>. Матрица <code>B</code> целиком реплицируется на все процессы с помощью <code>MPI_Bcast</code>. После локального умножения результаты собираются на корневом процессе с помощью <code>MPI_Gather</code>.</p>
+
+    <h2>4. Результаты замеров</h2>
+    <p>Ниже представлена таблица времени выполнения (в секундах). Замеры производились после прогрева, время засекалось с помощью <code>MPI_Wtime()</code>.</p>
+
+    <table>
+        <tr>
+            <th>Размер (N)</th>
+            <th>1 процесс</th>
+            <th>2 процесса</th>
+            <th>4 процесса</th>
+            <th>8 процессов</th>
+        </tr>
+        <tr><td><b>200</b></td><td>0.0135</td><td>0.0073</td><td>0.0042</td><td>0.0033</td></tr>
+        <tr><td><b>400</b></td><td>0.1101</td><td>0.0572</td><td>0.0307</td><td>0.0169</td></tr>
+        <tr><td><b>800</b></td><td>0.5633</td><td>0.2872</td><td>0.1750</td><td>0.1524</td></tr>
+        <tr><td><b>1200</b></td><td>1.9061</td><td>0.9627</td><td>0.7168</td><td>0.5459</td></tr>
+        <tr><td><b>1600</b></td><td>8.3164</td><td>4.2303</td><td>3.3616</td><td>1.8465</td></tr>
+        <tr><td><b>2000</b></td><td>20.6264</td><td>10.2812</td><td>5.4213</td><td>3.0232</td></tr>
+    </table>
+
+    <h3>Ускорение (S = T₁ / Tₚ)</h3>
+    <table>
+        <tr><th>N \ P</th><th>1</th><th>2</th><th>4</th><th>8</th></tr>
+        <tr><td><b>200</b></td><td>1.00</td><td>1.85</td><td>3.19</td><td>4.09</td></tr>
+        <tr><td><b>400</b></td><td>1.00</td><td>1.92</td><td>3.59</td><td>6.51</td></tr>
+        <tr><td><b>800</b></td><td>1.00</td><td>1.96</td><td>3.22</td><td>3.70</td></tr>
+        <tr><td><b>1200</b></td><td>1.00</td><td>1.98</td><td>2.66</td><td>3.49</td></tr>
+        <tr><td><b>1600</b></td><td>1.00</td><td>1.97</td><td>2.47</td><td>4.50</td></tr>
+        <tr><td><b>2000</b></td><td>1.00</td><td>2.01</td><td>3.80</td><td><b>6.82</b></td></tr>
+    </table>
+
+    <h3>Эффективность (E = S / P)</h3>
+    <table>
+        <tr><th>N \ P</th><th>1</th><th>2</th><th>4</th><th>8</th></tr>
+        <tr><td><b>200</b></td><td>1.00</td><td>0.92</td><td>0.80</td><td>0.51</td></tr>
+        <tr><td><b>400</b></td><td>1.00</td><td>0.96</td><td>0.90</td><td>0.81</td></tr>
+        <tr><td><b>800</b></td><td>1.00</td><td>0.98</td><td>0.80</td><td>0.46</td></tr>
+        <tr><td><b>1200</b></td><td>1.00</td><td>0.99</td><td>0.66</td><td>0.44</td></tr>
+        <tr><td><b>1600</b></td><td>1.00</td><td>0.98</td><td>0.62</td><td>0.56</td></tr>
+        <tr><td><b>2000</b></td><td>1.00</td><td>1.00</td><td>0.95</td><td><b>0.85</b></td></tr>
+    </table>
+
+    <h2>5. Графики</h2>
+    <p>На графиках наглядно видно поведение алгоритма при масштабировании.</p>
+    
+    <img src="img/time_plot.png" alt="График времени от размера">
+    <img src="img/speedup_plot.png" alt="График ускорения">
+    <img src="img/efficiency_plot.png" alt="График эффективности">
+
+    <h2>6. Анализ результатов</h2>
+    <div class="highlight">
+        <p><b>Малые задачи (N=200):</b> Ускорение на 8 процессах составляет всего 4.09x (эффективность 51%). Это объясняется высокими накладными расходами на коммуникацию (особенно <code>MPI_Bcast</code> для матрицы B). Время на пересылку данных здесь сопоставимо со временем самих вычислений (закон Амдала).</p>
+        <p><b>Большие задачи (N=2000):</b> Достигнуто ускорение <b>6.82x</b> на 8 процессах при эффективности <b>85%</b>. Вычисления становятся настолько объемными, что накладные расходы на сеть перестают играть критическую роль.</p>
+        <p><b>Аномалии на N=800 и N=1200:</b> Заметно проседание эффективности на 8 процессах (до 44-46%). Вероятная причина — конкуренция за пропускную способность памяти и кэш-эффекты, характерные для архитектуры NUMA на вычислительных узлах.</p>
+    </div>
+
+    <h2>7. Вывод</h2>
+    <p>В ходе работы была реализована распределённая MPI-версия умножения матриц. Все прогоны прошли успешную верификацию (PASS). Технология MPI показала высокую эффективность на больших матрицах (ускорение 6.82x), однако для малых задач накладные расходы на пересылку сообщений делают её менее выгодной по сравнению с OpenMP.</p>
+
+</body>
+</html>
